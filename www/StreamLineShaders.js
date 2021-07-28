@@ -1,6 +1,6 @@
 const StreamLineVert = `
     attribute vec3 position;
-    attribute vec3 previous;
+    attribute vec3 prev;
     attribute vec3 next;
     attribute float side;
     attribute float width;
@@ -29,25 +29,25 @@ const StreamLineVert = `
 
         mat4 m = projectionMatrix * modelViewMatrix;
         vec4 finalPosition = m * vec4( position, 1.0 );
-        vec4 prevPos = m * vec4( previous, 1.0 );
+        vec4 prevPos = m * vec4( prev, 1.0 );
         vec4 nextPos = m * vec4( next, 1.0 );
 
-        vec2 currentP = fix( finalPosition, aspect );
+        vec2 currP = fix( finalPosition, aspect );
         vec2 prevP = fix( prevPos, aspect );
         vec2 nextP = fix( nextPos, aspect );
 
         float w = lineWidth * width;
 
         vec2 dir;
-        if ( nextP == currentP ) {
-            dir = normalize( currentP - prevP );
+        if ( nextP == currP ) {
+            dir = normalize( currP - prevP );
         }
-        else if( prevP == currentP ) {
-            dir = normalize( nextP - currentP );
+        else if( prevP == currP ) {
+            dir = normalize( nextP - currP );
         }
         else {
-            vec2 dir1 = normalize( currentP - prevP );
-            vec2 dir2 = normalize( nextP - currentP );
+            vec2 dir1 = normalize( currP - prevP );
+            vec2 dir2 = normalize( nextP - currP );
             dir = normalize( dir1 + dir2 );
 
             vec2 perp = vec2( -dir1.y, dir1.x );

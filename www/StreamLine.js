@@ -21,16 +21,14 @@ function memcpy(src, srcOffset, dst, dstOffset, length) {
 
 class StreamLine {
     constructor() {
-        this.positions = [];
-        this.previous = [];
-        this.next = [];
-        this.side = [];
-        this.width = [];
-        this.indices_array = [];
-        this.uvs = [];
-        this.counters = [];
+        this._position = [];
+        this._prev = [];
+        this._next = [];
+        this._side = [];
+        this._width = [];
+        this._index = [];
 
-        this.widthCallback = null;
+        this._widthCallback = null;
         this._geometry = null; // THREE.BufferGeometry();
     }
 
@@ -43,34 +41,41 @@ class StreamLine {
             throw new Error("Input points must be of Float32Array type");
         }
 
-        this.widthCallback = wcb;
-        this.positions = [];
-        this.counters = [];
+        this._widthCallback = wcb;
+        this._position = [];
 
         for (let j = 0; j < points.length; j += 3) {
             const c = j / points.length;
-            this.positions.push(points[j], points[j + 1], points[j + 2]);
-            this.positions.push(points[j], points[j + 1], points[j + 2]);
-            this.counters.push(c);
-            this.counters.push(c);
+            this._position.push(points[j], points[j + 1], points[j + 2]);
+            this._position.push(points[j], points[j + 1], points[j + 2]);
         }
 
         this.process();
     }
 
     compareV3(a, b) {
-        var aa = a * 6;
-        var ab = b * 6;
+        const aa = a * 6;
+        const ab = b * 6;
+
         return (
-            this.positions[aa] === this.positions[ab] &&
-            this.positions[aa + 1] === this.positions[ab + 1] &&
-            this.positions[aa + 2] === this.positions[ab + 2]
+            this._position[aa] === this._position[ab] &&
+            this._position[aa + 1] === this._position[ab + 1] &&
+            this._position[aa + 2] === this._position[ab + 2]
         );
     }
 
     copyV3(a) {
-        var aa = a * 6;
-        return [this.positions[aa], this.positions[aa + 1], this.positions[aa + 2]];
+        const aa = a * 6;
+        return {
+            x: this._position[aa],
+            y: this._position[aa + 1],
+            z: this._position[aa + 2],
+        };
+    }
+
+    updateAttribute(attribute, dataArray) {
+        attribute.copyArray(dataArray);
+        attribute.needsUpdate = true;
     }
 
     process() {
@@ -79,103 +84,104 @@ class StreamLine {
             this._geometry = null;
         }
 
-        const l = this.positions.length / 6;
+        const l = this._position.length / 6;
 
-        this.previous = [];
-        this.next = [];
-        this.side = [];
-        this.width = [];
-        this.indices_array = [];
-        this.uvs = [];
+        this._prev = [];
+        this._next = [];
+        this._side = [];
+        this._width = [];
+        this._index = [];
 
-        let v;
-        // initial previous points
-        if (this.compareV3(0, l - 1)) {
-            v = this.copyV3(l - 2);
-        } else {
-            v = this.copyV3(0);
+        const isLoop = this.compareV3(0, l - 1);
+
+        {
+            // Create a 'previous point' for the first point of line. This 'previous'
+            // point of the first point can either be the same as the first point itself
+            // (when the line does not form a loop), or the second last point (when the
+            // line is a loop).
+            // 
+            const copyFromIndex = isLoop ? l - 2 : 0;
+            const { x, y, z } = this.copyV3(copyFromIndex);
+
+            this._prev.push(x, y, z);
+            this._prev.push(x, y, z);
         }
-
-        this.previous.push(v[0], v[1], v[2]);
-        this.previous.push(v[0], v[1], v[2]);
 
         for (var j = 0; j < l; j++) {
             // sides
-            this.side.push(1);
-            this.side.push(-1);
+            this._side.push(1);
+            this._side.push(-1);
 
             // widths
             let w = 1.0;
-            if (this.widthCallback) {
-                w = this.widthCallback(j / (l - 1));
+            if (this._widthCallback) {
+                w = this._widthCallback(j / (l - 1));
             }
 
-            this.width.push(w);
-            this.width.push(w);
-
-            // uvs
-            this.uvs.push(j / (l - 1), 0);
-            this.uvs.push(j / (l - 1), 1);
+            this._width.push(w);
+            this._width.push(w);
 
             if (j < l - 1) {
-                // points previous to poisitions
-                v = this.copyV3(j);
-                this.previous.push(v[0], v[1], v[2]);
-                this.previous.push(v[0], v[1], v[2]);
+                // points prev to poisitions
+                const { x, y, z } = this.copyV3(j);
+                this._prev.push(x, y, z);
+                this._prev.push(x, y, z);
 
                 // indices
                 var n = j * 2;
-                this.indices_array.push(n, n + 1, n + 2);
-                this.indices_array.push(n + 2, n + 1, n + 3);
+                this._index.push(n, n + 1, n + 2);
+                this._index.push(n + 2, n + 1, n + 3);
             }
             if (j > 0) {
                 // points after poisitions
-                v = this.copyV3(j);
-                this.next.push(v[0], v[1], v[2]);
-                this.next.push(v[0], v[1], v[2]);
+                const { x, y, z } = this.copyV3(j);
+                this._next.push(x, y, z);
+                this._next.push(x, y, z);
             }
         }
 
-        // last next point
-        if (this.compareV3(l - 1, 0)) {
-            v = this.copyV3(1);
-        } else {
-            v = this.copyV3(l - 1);
+        {
+            // Create a 'next point' for the last point in the line. This 'next' point
+            // of the last point in line can either be the same as the last point itself
+            // (when the line does not form a loop), or the second point in line (when
+            // the line is a loop).
+            // 
+            const copyFromIndex = isLoop ? 1 : l - 1;
+            const { x, y, z } = this.copyV3(copyFromIndex);
+
+            this._next.push(x, y, z);
+            this._next.push(x, y, z);
         }
 
-        this.next.push(v[0], v[1], v[2]);
-        this.next.push(v[0], v[1], v[2]);
+        const positionArray = new Float32Array(this._position);
+        const prevArray = new Float32Array(this._prev);
+        const nextArray = new Float32Array(this._next);
+        const sideArray = new Float32Array(this._side);
+        const widthArray = new Float32Array(this._width);
+        const indexArray = new Uint16Array(this._index);
 
-        // redefining the attribute seems to prevent range errors
-        // if the user sets a differing number of vertices
-        if (!this._attributes || this._attributes.position.count !== this.positions.length) {
+        if (!this._attributes || this._attributes.position.count !== this._position.length) {
             this._attributes = {
-                position: new THREE.BufferAttribute(new Float32Array(this.positions), 3),
-                previous: new THREE.BufferAttribute(new Float32Array(this.previous), 3),
-                next: new THREE.BufferAttribute(new Float32Array(this.next), 3),
-                side: new THREE.BufferAttribute(new Float32Array(this.side), 1),
-                width: new THREE.BufferAttribute(new Float32Array(this.width), 1),
-                index: new THREE.BufferAttribute(new Uint16Array(this.indices_array), 1),
+                position: new THREE.BufferAttribute(positionArray, 3),
+                prev: new THREE.BufferAttribute(prevArray, 3),
+                next: new THREE.BufferAttribute(nextArray, 3),
+                side: new THREE.BufferAttribute(sideArray, 1),
+                width: new THREE.BufferAttribute(widthArray, 1),
+                index: new THREE.BufferAttribute(indexArray, 1),
             };
         } else {
-            this._attributes.position.copyArray(new Float32Array(this.positions));
-            this._attributes.position.needsUpdate = true;
-            this._attributes.previous.copyArray(new Float32Array(this.previous));
-            this._attributes.previous.needsUpdate = true;
-            this._attributes.next.copyArray(new Float32Array(this.next));
-            this._attributes.next.needsUpdate = true;
-            this._attributes.side.copyArray(new Float32Array(this.side));
-            this._attributes.side.needsUpdate = true;
-            this._attributes.width.copyArray(new Float32Array(this.width));
-            this._attributes.width.needsUpdate = true;
-            this._attributes.index.copyArray(new Uint16Array(this.indices_array));
-            this._attributes.index.needsUpdate = true;
+            updateAttribute(this._attributes.position, positionArray);
+            updateAttribute(this._attributes.prev, prevArray);
+            updateAttribute(this._attributes.next, nextArray);
+            updateAttribute(this._attributes.side, sideArray);
+            updateAttribute(this._attributes.width, widthArray);
+            updateAttribute(this._attributes.index, indexArray);
         }
 
         this._geometry = new THREE.BufferGeometry();
 
         this._geometry.addAttribute("position", this._attributes.position);
-        this._geometry.addAttribute("previous", this._attributes.previous);
+        this._geometry.addAttribute("prev", this._attributes.prev);
         this._geometry.addAttribute("next", this._attributes.next);
         this._geometry.addAttribute("side", this._attributes.side);
         this._geometry.addAttribute("width", this._attributes.width);
@@ -191,12 +197,12 @@ class StreamLine {
      */
     advance(position) {
         var positions = this._attributes.position.array;
-        var previous = this._attributes.previous.array;
+        var prev = this._attributes.prev.array;
         var next = this._attributes.next.array;
         var l = positions.length;
 
-        // PREVIOUS
-        memcpy(positions, 0, previous, 0, l);
+        // PREV
+        memcpy(positions, 0, prev, 0, l);
 
         // POSITIONS
         memcpy(positions, 6, positions, 0, l - 6);
@@ -219,7 +225,7 @@ class StreamLine {
         next[l - 1] = position.z;
 
         this._attributes.position.needsUpdate = true;
-        this._attributes.previous.needsUpdate = true;
+        this._attributes.prev.needsUpdate = true;
         this._attributes.next.needsUpdate = true;
     }
 }

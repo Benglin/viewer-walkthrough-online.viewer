@@ -29,7 +29,7 @@ function StreamLineMaterial(parameters) {
         },
         attributes: {
             position: { type: "v3", value: new THREE.Vector3() },
-            previous: { type: "v3", value: new THREE.Vector3() },
+            prev: { type: "v3", value: new THREE.Vector3() },
             next: { type: "v3", value: new THREE.Vector3() },
             side: { type: "f", value: 0.0 },
             width: { type: "f", value: 0.0 },
