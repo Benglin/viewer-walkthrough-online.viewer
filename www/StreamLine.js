@@ -1,6 +1,4 @@
 function memcpy(src, srcOffset, dst, dstOffset, length) {
-    var i;
-
     src = src.subarray || src.slice ? src : src.buffer;
     dst = dst.subarray || dst.slice ? dst : dst.buffer;
 
@@ -13,7 +11,7 @@ function memcpy(src, srcOffset, dst, dstOffset, length) {
     if (dst.set) {
         dst.set(src, dstOffset);
     } else {
-        for (i = 0; i < src.length; i++) {
+        for (let i = 0; i < src.length; i++) {
             dst[i + dstOffset] = src[i];
         }
     }
@@ -21,12 +19,8 @@ function memcpy(src, srcOffset, dst, dstOffset, length) {
     return dst;
 }
 
-class StreamLineEx {
+class StreamLine {
     constructor() {
-        this.type = "StreamLine";
-        this.isMeshLine = true;
-        this._geometry = null; // THREE.BufferGeometry();
-
         this.positions = [];
         this.previous = [];
         this.next = [];
@@ -37,6 +31,7 @@ class StreamLineEx {
         this.counters = [];
 
         this.widthCallback = null;
+        this._geometry = null; // THREE.BufferGeometry();
     }
 
     get geometry() {
@@ -110,7 +105,7 @@ class StreamLineEx {
             this.side.push(-1);
 
             // widths
-            let w = 1;
+            let w = 1.0;
             if (this.widthCallback) {
                 w = this.widthCallback(j / (l - 1));
             }
@@ -160,9 +155,7 @@ class StreamLineEx {
                 next: new THREE.BufferAttribute(new Float32Array(this.next), 3),
                 side: new THREE.BufferAttribute(new Float32Array(this.side), 1),
                 width: new THREE.BufferAttribute(new Float32Array(this.width), 1),
-                uv: new THREE.BufferAttribute(new Float32Array(this.uvs), 2),
                 index: new THREE.BufferAttribute(new Uint16Array(this.indices_array), 1),
-                counters: new THREE.BufferAttribute(new Float32Array(this.counters), 1),
             };
         } else {
             this._attributes.position.copyArray(new Float32Array(this.positions));
@@ -175,8 +168,6 @@ class StreamLineEx {
             this._attributes.side.needsUpdate = true;
             this._attributes.width.copyArray(new Float32Array(this.width));
             this._attributes.width.needsUpdate = true;
-            this._attributes.uv.copyArray(new Float32Array(this.uvs));
-            this._attributes.uv.needsUpdate = true;
             this._attributes.index.copyArray(new Uint16Array(this.indices_array));
             this._attributes.index.needsUpdate = true;
         }
@@ -188,8 +179,6 @@ class StreamLineEx {
         this._geometry.addAttribute("next", this._attributes.next);
         this._geometry.addAttribute("side", this._attributes.side);
         this._geometry.addAttribute("width", this._attributes.width);
-        this._geometry.addAttribute("uv", this._attributes.uv);
-        this._geometry.addAttribute("counters", this._attributes.counters);
         this._geometry.addAttribute("index", this._attributes.index);
 
         this._geometry.computeBoundingSphere();
@@ -232,56 +221,6 @@ class StreamLineEx {
         this._attributes.position.needsUpdate = true;
         this._attributes.previous.needsUpdate = true;
         this._attributes.next.needsUpdate = true;
-    }
-}
-
-class StreamLine {
-    constructor() {
-        this.positions = [];
-        this.indices_array = [];
-    }
-
-    get geometry() {
-        return this._geometry;
-    }
-
-    setPoints(points, wcb) {
-        if (!(points instanceof Float32Array) || points.length === 0) {
-            throw new Error("Input points must be of Float32Array type");
-        }
-
-        this.positions = [];
-
-        for (let j = 0; j < points.length; j += 3) {
-            this.positions.push(points[j], points[j + 1], points[j + 2]);
-        }
-
-        this.indices_array.push(0, 1, 2, 3, 4, 5);
-        this.process();
-    }
-
-    process() {
-        if (this._geometry) {
-            this._geometry.dispose();
-            this._geometry = null;
-        }
-
-        // redefining the attribute seems to prevent range errors
-        // if the user sets a differing number of vertices
-        if (!this._attributes || this._attributes.position.count !== this.positions.length) {
-            this._attributes = {
-                position: new THREE.BufferAttribute(new Float32Array(this.positions), 3),
-                index: new THREE.BufferAttribute(new Uint16Array(this.indices_array), 1),
-            };
-        }
-
-        this._geometry = new THREE.BufferGeometry();
-
-        this._geometry.addAttribute("position", this._attributes.position);
-        this._geometry.addAttribute("index", this._attributes.index);
-
-        this._geometry.computeBoundingSphere();
-        this._geometry.computeBoundingBox();
     }
 }
 
