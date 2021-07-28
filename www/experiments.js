@@ -18,16 +18,27 @@ async function addMeshToScene(mesh, viewer) {
 }
 
 window.createStreamLines = async function (viewer) {
+    const sphereRadius = 45.0;
+    const horzSegments = 72 | 0;
+    const vertSegments = 72 | 0;
+    const totalSegments = horzSegments * vertSegments;
+
+    const coords = [];
+    for (let s = 0; s < totalSegments; s++) {
+        const b = (s / totalSegments) * Math.PI;
+        const radius = sphereRadius * Math.sin(b);
+
+        const z = sphereRadius * Math.cos(b);
+        const f = s / (horzSegments * 1.0);
+        const angle = (f - Math.floor(f)) * 2.0 * Math.PI;
+        coords.push(radius * Math.sin(angle), radius * Math.cos(angle), -z);
+    }
+
     const line = new StreamLine();
-    line.setPoints(
-        new Float32Array([
-            0.0, 0.0, 0.0, -10.0, 10.0, 10.0, 20.0, -20.0, 20.0, -11.0, 11.0, 11.0, 21.0, -21.0,
-            21.0, 30.0, 30.0, 30.0,
-        ])
-    );
+    line.setPoints(new Float32Array(coords));
 
     const material = new StreamLineMaterial({
-        color: new THREE.Color(0xffe066),
+        color: new THREE.Color(0x00ff40),
     });
 
     line.geometry.visible = true;
@@ -35,14 +46,4 @@ window.createStreamLines = async function (viewer) {
     await addMeshToScene(mesh, viewer);
 
     setTimeout(() => viewer.impl.invalidate(true, true, true), 16);
-};
-
-window.createStreamLinesz = async function (viewer) {
-    const theGeometry = new THREE.BufferGeometry().fromGeometry(
-        new THREE.BoxGeometry(32.0, 32.0, 32.0, 8.0, 8.0, 8.0)
-    );
-
-    const theMaterial = new THREE.MeshPhongMaterial({ color: new THREE.Color(1.0, 0.5, 0) });
-    const mesh = new THREE.Mesh(theGeometry, theMaterial);
-    addMeshToScene(mesh, viewer);
 };

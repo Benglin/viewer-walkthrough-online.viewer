@@ -66,12 +66,7 @@
             function onModelLoaded() {
                 const av = Autodesk.Viewing;
                 viewer.removeEventListener(av.GEOMETRY_LOADED_EVENT, onModelLoaded);
-
-                setTimeout(() => {
-                    const sphereDbId = 3;
-                    viewer.hide(sphereDbId);
-                    window.createStreamLines(viewer);
-                }, 10);
+                setTimeout(() => window.createStreamLines(viewer), 10);
             }
 
             const av = Autodesk.Viewing;
