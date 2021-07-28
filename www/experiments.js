@@ -14,10 +14,7 @@ async function addMeshToViewer(mesh, viewer) {
 async function addMeshToScene(mesh, viewer) {
     const overlayName = "StreamLineOverlay";
     viewer.impl.createOverlayScene(overlayName);
-
-    let scene = new THREE.Scene();
-    scene.add(mesh);
-    viewer.impl.addOverlay(overlayName, scene);
+    viewer.impl.addOverlay(overlayName, mesh);
 }
 
 window.createStreamLines = async function (viewer) {
