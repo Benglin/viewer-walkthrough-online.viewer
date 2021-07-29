@@ -1,17 +1,7 @@
 import { StreamLine } from "/StreamLine.js";
 import { StreamLineMaterial } from "/StreamLineMaterial.js";
 
-async function addMeshToViewer(mesh, viewer) {
-    const sceneBuilder = await viewer.loadExtension("Autodesk.Viewing.SceneBuilder");
-    const modelBuilder = await sceneBuilder.addNewModel({
-        modelNameOverride: "My Custom Model",
-        conserveMemory: false,
-    });
-
-    modelBuilder.addMesh(mesh);
-}
-
-async function addMeshToScene(mesh, viewer) {
+function addMeshToScene(mesh, viewer) {
     const overlayName = "StreamLineOverlay";
     viewer.impl.createOverlayScene(overlayName);
     viewer.impl.addOverlay(overlayName, mesh);
@@ -43,7 +33,7 @@ window.createStreamLines = async function (viewer) {
 
     line.geometry.visible = true;
     const mesh = new THREE.Mesh(line.geometry, material);
-    await addMeshToScene(mesh, viewer);
+    addMeshToScene(mesh, viewer);
 
     setTimeout(() => viewer.impl.invalidate(true, true, true), 16);
 };
